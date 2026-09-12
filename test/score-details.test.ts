@@ -454,3 +454,20 @@ test('a request with no page parameters gets the full first page of each section
     assert.equal((await sections('?recent=nonsense')).recent.length, 4);
   });
 });
+
+/*
+ * The page and its modules must revalidate.
+ *
+ * The static route sent `content-type` and nothing else, so a browser applied heuristic
+ * caching and could serve `index.html` and `/js/main.js` from its own cache without ever
+ * asking again -- an update swapped in underneath the app would still run the old UI.
+ */
+test('static assets are served with a revalidation header', async () => {
+  await withServer(async (base) => {
+    for (const asset of ['/', '/js/main.js']) {
+      const r = await fetch(`${base}${asset}`);
+      assert.equal(r.status, 200, asset);
+      assert.equal(r.headers.get('cache-control'), 'no-cache', asset);
+    }
+  });
+});

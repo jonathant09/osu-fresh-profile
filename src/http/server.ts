@@ -1384,6 +1384,11 @@ export function startServer(opts: ServerOptions): http.Server {
       }
       res.writeHead(200, {
         'content-type': MIME[path.extname(file).toLowerCase()] ?? 'application/octet-stream',
+        // Without this the page and its modules carry no freshness information at all, and a
+        // browser is free to keep serving them from its own cache indefinitely -- so an update
+        // swapped in underneath the app would still be running last week's UI against this
+        // week's API. `no-cache` still caches; it only requires a revalidation first.
+        'cache-control': 'no-cache',
       });
       res.end(buf);
     });
