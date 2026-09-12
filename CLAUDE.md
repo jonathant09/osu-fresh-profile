@@ -1,12 +1,10 @@
 # osu! local profiles
 
-Repo: `github.com/jonathant09/osu-local-profiles`. That is the only name — do not reintroduce the old one.
+## Before roadmap work
 
-## Before any new work
+For roadmap-tracked implementation, search [`docs/roadmap.md`](docs/roadmap.md) for the relevant entry; never read it whole. Update it only when the task changes its status.
 
-Read [`docs/roadmap.md`](docs/roadmap.md). Update its status column as you go.
-
-Architecture notes: [`docs/architecture.md`](docs/architecture.md). Read relevant sections when needed.
+Read only relevant sections of [`docs/architecture.md`](docs/architecture.md) when architecture context is needed.
 
 ## TS: strip-only, no runtime emit
 
@@ -16,7 +14,7 @@ Architecture notes: [`docs/architecture.md`](docs/architecture.md). Read relevan
 - No `enum` (use `const` objects `as const`)
 - No `namespace`, no decorators
 
-`npm run check` = typecheck + full test suite. Use this.
+`npm run check` = typecheck + full test suite. Run it before every commit.
 
 Tests: `node --test "test/**/*.test.ts"` (quoted glob required).
 
@@ -37,30 +35,28 @@ Tests: `node --test "test/**/*.test.ts"` (quoted glob required).
 - No API polling. Local detection only. Works with no credentials, no network
 - No scan-and-import on startup. Import past plays is explicit: pick cutoff, preview, confirm
 - Ingestion serialized through promise queue (`src/tracker/index.ts`)
+- Live feed is SSE, and a browser allows 6 connections per origin. Only a *visible* tab may
+  hold the stream open, or open tabs starve the page itself (`web/js/main.js`)
 
 ## UI checks
 
-`npm run ui` drives `web/index.html` in headless Chrome via CDP, asserts computed style.
+`npm run ui` drives the **running app** (`http://localhost:7272/`, override with an argv
+URL) in headless Chrome via CDP and asserts computed style. Start the app first, or it
+fails.
 
-`[hidden] { display: none !important; }` is global. Keep it.
+`[hidden] { display: none !important; }` in `web/css/base.css` is global. Keep it.
 
-## Project layout
+## Git
 
-```
-src/osr.ts              replay parser (legacy header + lazer extended block)
-src/clients/            install detection, beatmap MD5 index, online.db
-src/tracker/            fs.watch, settle-on-write, ingest + dedupe
-src/calc/               pp (official only), level, grades, aggregation
-src/calc/official.ts    JSON-lines client for .NET calc
-src/calc/eligibility.ts single "this score counts" definition
-src/settings.ts         per-profile settings
-src/tracking-filter.ts  which plays tracked (at ingest, never after)
-src/tracker/recompute.ts recalc scores in place from replays
-src/scores.ts           pin, order, hide scores; View Details data
-src/update/             GitHub release check, unpack, swap
-scripts/apply-update.mjs detached swapper (ships in every package)
-tools/PpCalculator/     .NET helper
-web/index.html          Phase 1 UI
-web/score.html          /scores/<id> page
-web/js/                 page modules (share-copy, static-mode, bundle)
-```
+Conventional Commits, scope optional: `feat:`, `fix:`, `docs:`, `chore:`, `test:`, `refactor:`,
+`perf:`, `style:`. Releases are `chore: release vX.Y.Z`.
+
+History is linear — rebase onto `main`, do not merge it into a branch.
+
+## Key entry points
+
+- `src/main.ts`: application startup
+- `src/osr.ts`: legacy and lazer replay parser
+- `src/tracker/index.ts`: serialized replay ingestion
+- `src/calc/official.ts`: JSON-lines bridge to `tools/PpCalculator/`
+- `src/http/server.ts`: HTTP API and static serving
