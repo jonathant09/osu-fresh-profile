@@ -40,6 +40,8 @@ const ADDED_COLUMNS: ReadonlyArray<{ table: string; column: string; definition: 
   // no start time to measure from -- see src/calc/play-time.ts.
   { table: 'beatmaps', column: 'length_ms', definition: 'INTEGER' },
   { table: 'incomplete_plays', column: 'started_at', definition: 'INTEGER' },
+  // NULL marks rows indexed by an older version and makes the index backfill them once.
+  { table: 'osu_files', column: 'beatmap_id', definition: 'INTEGER' },
   // Added with the pp breakdown and the calculator version. NULL on older rows until the
   // score is recalculated -- opening its details does that for one score, Settings for all.
   { table: 'scores', column: 'score_standard', definition: 'INTEGER' },
@@ -63,13 +65,16 @@ const ADDED_COLUMNS: ReadonlyArray<{ table: string; column: string; definition: 
 const RETIRED_TABLES = ['snapshots'];
 
 function migrate(db: Db): void {
+  // pi-lens-ignore: sql-injection
   for (const table of RETIRED_TABLES) db.exec(`DROP TABLE IF EXISTS ${table}`);
   for (const { table, column, definition } of ADDED_COLUMNS) {
     const columns = db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
     if (columns.length === 0) continue; // table not created yet
     if (columns.some((c) => c.name === column)) continue;
+    // pi-lens-ignore: sql-injection
     db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
   }
+  db.exec('CREATE INDEX IF NOT EXISTS osu_files_beatmap_id ON osu_files (beatmap_id)');
 }
 
 /** Read-only handle for a database owned by the osu! client (never written to). */
