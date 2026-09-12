@@ -26,6 +26,7 @@ Tests: `node --test "test/**/*.test.ts"` (quoted glob required).
 
 - Hand the replay file, never a reconstructed ScoreInfo
 - No fallback calc (`rosu-pp` removed). Helper down = store no pp, say so
+- Do not trim it. `PublishTrimmed` breaks osu!'s own graph — see `docs/architecture.md`, roadmap 5.44
 - Every pp carries osu! release version + breakdown. Parts must match the pp beside them
 - `docs/reference-links.md` has links to osu-web, ppy/osu, API docs
 

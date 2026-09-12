@@ -36,6 +36,8 @@
 
 **No fallback calculator.** `rosu-pp` removed on purpose. Reimplementations lag osu!'s reworks.
 
+**Do not trim the helper.** `PublishTrimmed` takes it 113MB -> 36MB but breaks inside osu!'s own graph (`StringEnumConverter`, reading lazer's extended block); .NET's linker warns osu.Game, osu.Framework, Realm, Newtonsoft, AutoMapper and MongoDB.Bson are all trim-unsafe. Measured at 1.13.1. Making it work means a trimmer root descriptor over osu!'s internals, re-verified on every package bump, guarding against a *wrong pp value* rather than a crash. `docs/roadmap.md` 5.44 has the four failures in order and the reproduction.
+
 **After a pp rework:** bump package versions in `PpCalculator.csproj`, run `node scripts/reingest.mjs`.
 
 ## Incomplete plays: over half of plays leave no replay
