@@ -181,11 +181,17 @@ export async function indexBeatmapFiles(
   onProgress?: (progress: IndexProgress) => void,
 ): Promise<{ scanned: number; indexed: number }> {
   const known = new Set<string>();
-  for (const r of db.prepare('SELECT path, beatmap_id FROM osu_files').all() as { path: string; beatmap_id: number | null }[]) {
+  const indexed = db.prepare('SELECT path, beatmap_id FROM osu_files').all() as {
+    path: string;
+    beatmap_id: number | null;
+  }[];
+  for (const r of indexed) {
     // Older rows have no ID metadata. Re-read each once to backfill it.
     if (r.beatmap_id !== null) known.add(r.path);
   }
-  const firstRun = known.size === 0;
+  // Counted before the backfill filter: an upgrade re-reads every row, but the index has
+  // been built before and must not be announced as a first run.
+  const firstRun = indexed.length === 0;
   for (const r of db.prepare('SELECT path FROM not_beatmaps').all() as { path: string }[]) {
     known.add(r.path);
   }
@@ -245,7 +251,6 @@ export async function indexBeatmapFiles(
         } else if (size >= 0) {
           try {
             const contents = fs.readFileSync(file);
-            // pi-lens-ignore: ts-weak-hash
             const md5 = crypto.createHash('md5').update(contents).digest('hex');
             const beatmapId = parseOsuMetadataText(contents.toString('utf8')).beatmapId ?? 0;
             write(insertOsu, file, md5, beatmapId, size, Date.now());
@@ -273,7 +278,6 @@ export function indexOneFile(db: Db, file: string): void {
   try {
     if (!isBeatmapFile(file)) return;
     const contents = fs.readFileSync(file);
-    // pi-lens-ignore: ts-weak-hash
     const md5 = crypto.createHash('md5').update(contents).digest('hex');
     const beatmapId = parseOsuMetadataText(contents.toString('utf8')).beatmapId ?? 0;
     db.prepare(
@@ -428,11 +432,11 @@ export class BeatmapResolver {
       .prepare(
         `SELECT f.md5, EXISTS(SELECT 1 FROM beatmaps b WHERE b.md5 = f.md5) AS cached
            FROM osu_files f
-          WHERE f.beatmap_id = ? AND ? > 0
+          WHERE f.beatmap_id = ?
           GROUP BY f.md5
           ORDER BY cached DESC`,
       )
-      .all(beatmapId, beatmapId) as { md5: string; cached: number }[];
+      .all(beatmapId) as { md5: string; cached: number }[];
     if (local.length === 1 || (local[0]?.cached === 1 && local[1]?.cached !== 1)) {
       return local[0]!.md5;
     }

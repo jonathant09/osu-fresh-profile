@@ -65,7 +65,6 @@ const ADDED_COLUMNS: ReadonlyArray<{ table: string; column: string; definition: 
 const RETIRED_TABLES = ['snapshots'];
 
 function migrate(db: Db): void {
-
   for (const table of RETIRED_TABLES) db.exec(`DROP TABLE IF EXISTS ${table}`);
   for (const { table, column, definition } of ADDED_COLUMNS) {
     const columns = db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];

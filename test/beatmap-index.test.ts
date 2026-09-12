@@ -130,10 +130,14 @@ test('an existing index backfills local beatmap ids once', async () => {
 
   const db = openDb(dbFile);
   try {
+    const progress: IndexProgress[] = [];
     await indexBeatmapFiles(db, [
       { path: path.join(tmp, 'files'), byExtension: false },
-    ]);
+    ], (p) => progress.push({ ...p }));
     assert.notEqual(new BeatmapResolver(db, []).md5ForBeatmapId(5438074), null);
+    // The backfill re-reads every row, but this index was built by an earlier version and
+    // must not be announced to the user as a first run.
+    assert.equal(progress[progress.length - 1]!.firstRun, false);
   } finally {
     db.close();
     fs.rmSync(tmp, { recursive: true, force: true });
