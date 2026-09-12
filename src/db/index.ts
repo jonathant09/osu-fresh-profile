@@ -65,13 +65,12 @@ const ADDED_COLUMNS: ReadonlyArray<{ table: string; column: string; definition: 
 const RETIRED_TABLES = ['snapshots'];
 
 function migrate(db: Db): void {
-  // pi-lens-ignore: sql-injection
+
   for (const table of RETIRED_TABLES) db.exec(`DROP TABLE IF EXISTS ${table}`);
   for (const { table, column, definition } of ADDED_COLUMNS) {
     const columns = db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
     if (columns.length === 0) continue; // table not created yet
     if (columns.some((c) => c.name === column)) continue;
-    // pi-lens-ignore: sql-injection
     db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
   }
   db.exec('CREATE INDEX IF NOT EXISTS osu_files_beatmap_id ON osu_files (beatmap_id)');
